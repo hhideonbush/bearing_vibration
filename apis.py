@@ -1,11 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Union
 from datetime import datetime
 import sys
 sys.path.append('./')
 from tools import fft, envelope_spectrum
-from typing import Union
 
 
 DEBIAS = True
@@ -13,24 +12,37 @@ app = FastAPI()
 
 class InputDataModel(BaseModel):
     data: List[Dict[str, Union[str, List[float]]]]
+    freq_list: List[int]
 
-def process_fft(data: Dict, debias=True) -> Dict:
+def process_fft(data: Dict, freq_list: List[int], debias=True) -> Dict:
     try:
         processed_data = {}
         for key, value in data.items():
             freq, magnitude = fft(value, debias)
-            processed_data[key] = {"freq": freq.tolist(), "magnitude": magnitude.tolist()}
+            filtered_freq = []
+            filtered_magnitude = []
+            for f, m in zip(freq.tolist(), magnitude.tolist()):
+                if f in freq_list:
+                    filtered_freq.append(f)
+                    filtered_magnitude.append(m)
+            processed_data[key] = {"freq": filtered_freq, "magnitude": filtered_magnitude}
         return processed_data
     except Exception as e:
         print(f"Error processing data: {e}")
         raise e
 
-def process_envelope(data: Dict, debias=True) -> Dict:
+def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
     try:
         processed_data = {}
         for key, value in data.items():
             freq, envelope = envelope_spectrum(value, debias)
-            processed_data[key] = {"freq": freq.tolist(), "envelope": envelope.tolist()}
+            filtered_freq = []
+            filtered_envelope = []
+            for f, e in zip(freq.tolist(), envelope.tolist()):
+                if f in freq_list:
+                    filtered_freq.append(f)
+                    filtered_envelope.append(e)
+            processed_data[key] = {"freq": filtered_freq, "envelope": filtered_envelope}
         return processed_data
     except Exception as e:
         print(f"Error processing data: {e}")
@@ -40,6 +52,7 @@ def process_envelope(data: Dict, debias=True) -> Dict:
 def data_fft(input_data: InputDataModel):
     '''
     curl -X POST -H "Content-Type: application/json" -d '{
+    "freq_list":[1,3],
     "data": [
     {
       "ts": "2024-01-30T12:34:56",
@@ -54,7 +67,8 @@ def data_fft(input_data: InputDataModel):
     '''
     try:
         rows = input_data.data
-        processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, DEBIAS)} for row in rows]
+        freq_list = input_data.freq_list
+        processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
 
         return {"fft_return": processed_data}
     except Exception as e:
@@ -64,7 +78,8 @@ def data_fft(input_data: InputDataModel):
 def data_es(input_data: InputDataModel):
     try:
         rows = input_data.data
-        processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, DEBIAS)} for row in rows]
+        freq_list = input_data.freq_list
+        processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
 
         return {"es_return": processed_data}
     except Exception as e:
