@@ -12,7 +12,7 @@ app = FastAPI()
 
 class InputDataModel(BaseModel):
     data: List[Dict[str, Union[str, List[float]]]]
-    freq_list: List[int]
+    freq_list: Union[List[int], None] = []
 
 def process_fft(data: Dict, freq_list: List[int], debias=True) -> Dict:
     try:
@@ -58,7 +58,7 @@ def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
 def data_fft(input_data: InputDataModel):
     '''
     curl -X POST -H "Content-Type: application/json" -d '{
-    "freq_list":[],
+    "freq_list":null,
     "data": [
     {
       "ts": "2024-01-30T12:34:56",
@@ -73,7 +73,7 @@ def data_fft(input_data: InputDataModel):
     '''
     try:
         rows = input_data.data
-        freq_list = input_data.freq_list
+        freq_list = input_data.freq_list if input_data.freq_list is not None else []
         processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
 
         return {"fft_return": processed_data}
@@ -84,7 +84,7 @@ def data_fft(input_data: InputDataModel):
 def data_es(input_data: InputDataModel):
     try:
         rows = input_data.data
-        freq_list = input_data.freq_list
+        freq_list = input_data.freq_list if input_data.freq_list is not None else []
         processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
 
         return {"es_return": processed_data}
