@@ -19,12 +19,15 @@ def process_fft(data: Dict, freq_list: List[int], debias=True) -> Dict:
         processed_data = {}
         for key, value in data.items():
             freq, magnitude = fft(value, debias)
-            filtered_freq = []
-            filtered_magnitude = []
-            for f, m in zip(freq.tolist(), magnitude.tolist()):
-                if f in freq_list:
-                    filtered_freq.append(f)
-                    filtered_magnitude.append(m)
+            filtered_freq = freq.tolist()
+            filtered_magnitude = magnitude.tolist()
+            if freq_list:
+                filtered_freq = []
+                filtered_magnitude = []
+                for f, m in zip(freq.tolist(), magnitude.tolist()):
+                    if f in freq_list:
+                        filtered_freq.append(f)
+                        filtered_magnitude.append(m)
             processed_data[key] = {"freq": filtered_freq, "magnitude": filtered_magnitude}
         return processed_data
     except Exception as e:
@@ -36,12 +39,15 @@ def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
         processed_data = {}
         for key, value in data.items():
             freq, envelope = envelope_spectrum(value, debias)
-            filtered_freq = []
-            filtered_envelope = []
-            for f, e in zip(freq.tolist(), envelope.tolist()):
-                if f in freq_list:
-                    filtered_freq.append(f)
-                    filtered_envelope.append(e)
+            filtered_freq = freq.tolist()
+            filtered_envelope = envelope.tolist()
+            if freq_list:
+                filtered_freq = []
+                filtered_envelope = []
+                for f, e in zip(freq.tolist(), envelope.tolist()):
+                    if f in freq_list:
+                        filtered_freq.append(f)
+                        filtered_envelope.append(e)
             processed_data[key] = {"freq": filtered_freq, "envelope": filtered_envelope}
         return processed_data
     except Exception as e:
@@ -52,7 +58,7 @@ def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
 def data_fft(input_data: InputDataModel):
     '''
     curl -X POST -H "Content-Type: application/json" -d '{
-    "freq_list":[1,3],
+    "freq_list":[],
     "data": [
     {
       "ts": "2024-01-30T12:34:56",
