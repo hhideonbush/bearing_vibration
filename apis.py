@@ -13,12 +13,13 @@ app = FastAPI()
 class InputDataModel(BaseModel):
     data: List[Dict[str, Union[str, List[float]]]]
     freq_list: Union[List[int], None] = []
+    sampling_rate: int = 25600 #默认采样率
 
-def process_fft(data: Dict, freq_list: List[int], debias=True) -> Dict:
+def process_fft(data: Dict, freq_list: List[int], sampling_rate: int, debias=True) -> Dict:
     try:
         processed_data = {}
         for key, value in data.items():
-            freq, magnitude = fft(value, debias)
+            freq, magnitude = fft(value, sampling_rate, debias)
             filtered_freq = freq.tolist()
             filtered_magnitude = magnitude.tolist()
             if freq_list:
@@ -34,11 +35,11 @@ def process_fft(data: Dict, freq_list: List[int], debias=True) -> Dict:
         print(f"Error processing data: {e}")
         raise e
 
-def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
+def process_envelope(data: Dict, freq_list: List[int], sampling_rate: int, debias=True) -> Dict:
     try:
         processed_data = {}
         for key, value in data.items():
-            freq, envelope = envelope_spectrum(value, debias)
+            freq, envelope = envelope_spectrum(value, sampling_rate, debias)
             filtered_freq = freq.tolist()
             filtered_envelope = envelope.tolist()
             if freq_list:
@@ -58,6 +59,7 @@ def process_envelope(data: Dict, freq_list: List[int], debias=True) -> Dict:
 def data_fft(input_data: InputDataModel):
     '''
     curl -X POST -H "Content-Type: application/json" -d '{
+    "sampling_rate":25600,
     "freq_list":null,
     "data": [
     {
@@ -74,7 +76,8 @@ def data_fft(input_data: InputDataModel):
     try:
         rows = input_data.data
         freq_list = input_data.freq_list if input_data.freq_list is not None else []
-        processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
+        sampling_rate = input_data.sampling_rate
+        processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, sampling_rate, DEBIAS)} for row in rows]
 
         return {"fft_return": processed_data}
     except Exception as e:
@@ -85,7 +88,8 @@ def data_es(input_data: InputDataModel):
     try:
         rows = input_data.data
         freq_list = input_data.freq_list if input_data.freq_list is not None else []
-        processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, DEBIAS)} for row in rows]
+        sampling_rate = input_data.sampling_rate
+        processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, sampling_rate, DEBIAS)} for row in rows]
 
         return {"es_return": processed_data}
     except Exception as e:

@@ -25,12 +25,8 @@ def read_original_file(file_name='./data/ftt-sample.sql'):
     return header, data
 
 
-def fft(signal, debias=True):
-    '''
-    采样率使用数据长度
-    '''
+def fft(signal, sampling_rate, debias=True):
     signal_length = len(signal)
-    sampling_rate = signal_length
 
     # 去掉偏置
     if debias:
@@ -50,13 +46,7 @@ def fft(signal, debias=True):
     return positive_frequencies, magnitude_spectrum
 
 
-def envelope_spectrum(signal, debias=True):
-    '''
-    采样率使用数据长度
-    '''
-    signal_length = len(signal)
-    sampling_rate = signal_length
-    
+def envelope_spectrum(signal, sampling_rate, debias=True):
     # 去掉偏置
     if debias:
         signal_mean = np.mean(signal)
@@ -87,4 +77,4 @@ if __name__ == "__main__":
     signal = np.sin(2 * np.pi * frequency * t)
 
     # 进行 FFT 分析
-    fft(signal, False)
+    fft(signal, sampling_rate, False)
