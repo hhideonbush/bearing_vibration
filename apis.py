@@ -11,7 +11,7 @@ DEBIAS = True
 app = FastAPI()
 
 class InputDataModel(BaseModel):
-    data: List[Dict[str, Union[str, List[float]]]]
+    data: List[Dict[str, Union[str, List[float], int]]]
     freq_list: Union[List[int], None] = []
     sampling_rate: int = 25600 #默认采样率
 
@@ -59,15 +59,16 @@ def process_envelope(data: Dict, freq_list: List[int], sampling_rate: int, debia
 def data_fft(input_data: InputDataModel):
     '''
     curl -X POST -H "Content-Type: application/json" -d '{
-    "sampling_rate":25600,
     "freq_list":null,
     "data": [
     {
       "ts": "2024-01-30T12:34:56",
+      "sampling_rate":25600,
       "acc_rms_x": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     },
     {
       "ts": "2024-01-30T14:34:56",
+      "sampling_rate":25600,
       "acc_rms_x": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     }
   ]
@@ -76,8 +77,7 @@ def data_fft(input_data: InputDataModel):
     try:
         rows = input_data.data
         freq_list = input_data.freq_list if input_data.freq_list is not None else []
-        sampling_rate = input_data.sampling_rate
-        processed_data = [{"ts": row.get("ts"), "data_fft": process_fft({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, sampling_rate, DEBIAS)} for row in rows]
+        processed_data = [{"ts": row.get("ts"), "sampling_rate":row.get("sampling_rate"), "data_fft": process_fft({key: value for key, value in row.items() if (key not in ['ts', 'sampling_rate']) and value is not None}, freq_list, row.get("sampling_rate"), DEBIAS)} for row in rows]
 
         return {"fft_return": processed_data}
     except Exception as e:
@@ -88,8 +88,7 @@ def data_es(input_data: InputDataModel):
     try:
         rows = input_data.data
         freq_list = input_data.freq_list if input_data.freq_list is not None else []
-        sampling_rate = input_data.sampling_rate
-        processed_data = [{"ts": row.get("ts"), "data_es": process_envelope({key: value for key, value in row.items() if key != 'ts' and value is not None}, freq_list, sampling_rate, DEBIAS)} for row in rows]
+        processed_data = [{"ts": row.get("ts"), "sampling_rate":row.get("sampling_rate"), "data_es": process_envelope({key: value for key, value in row.items() if (key not in ['ts', 'sampling_rate']) and value is not None}, freq_list, row.get("sampling_rate"), DEBIAS)} for row in rows]
 
         return {"es_return": processed_data}
     except Exception as e:
